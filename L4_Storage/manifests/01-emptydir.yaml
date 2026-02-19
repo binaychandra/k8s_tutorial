@@ -1,0 +1,65 @@
+# ──────────────────────────────────────────────────────────
+# 01-emptydir.yaml
+# ──────────────────────────────────────────────────────────
+# emptyDir Volume — Temporary storage that lives with the Pod.
+#
+# Two containers share the same volume:
+#   - "writer" writes a timestamp every 5 seconds
+#   - "reader" tails the log file
+#
+# Key Point: When you delete this Pod, ALL data is lost.
+#
+# Try it:
+#   kubectl apply -f 01-emptydir.yaml
+#   kubectl logs emptydir-demo -c reader -f
+#   kubectl delete pod emptydir-demo       ← data gone!
+# ──────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Pod
+metadata:
+  name: emptydir-demo
+  labels:
+    app: emptydir-demo
+    lesson: L4-storage
+spec:
+  containers:
+    # ── Container 1: Writer ──
+    # Writes timestamps to a shared file every 5 seconds
+    - name: writer
+      image: busybox
+      command: ["sh", "-c"]
+      args:
+        - |
+          echo "=== Writer started at $(date) ==="
+          i=1
+          while true; do
+            echo "[$i] $(date) — Hello from writer container" >> /shared/log.txt
+            echo "Wrote entry $i to /shared/log.txt"
+            i=$((i+1))
+            sleep 5
+          done
+      volumeMounts:
+        - name: shared-data            # ← must match volume name below
+          mountPath: /shared            # ← path inside THIS container
+
+    # ── Container 2: Reader ──
+    # Reads the same file written by the writer container
+    - name: reader
+      image: busybox
+      command: ["sh", "-c"]
+      args:
+        - |
+          echo "=== Reader started, waiting for data... ==="
+          sleep 8
+          echo "=== Reading from shared volume ==="
+          tail -f /shared/log.txt
+      volumeMounts:
+        - name: shared-data            # ← same volume name = same data!
+          mountPath: /shared            # ← path inside THIS container
+
+  # ── Volume Definition ──
+  volumes:
+    - name: shared-data
+      emptyDir: {}                      # ← starts empty, destroyed with pod
+      # Can also use: emptyDir: { medium: Memory }  ← uses RAM (tmpfs)
+      # Can also use: emptyDir: { sizeLimit: 100Mi } ← limit size
