@@ -1,0 +1,70 @@
+# ──────────────────────────────────────────────────────────
+# 06-deployment-storage.yaml
+# ──────────────────────────────────────────────────────────
+# Deployment that uses the dynamic PVC from 05-pvc-dynamic.yaml
+#
+# The demo app container mounts the PVC at /app/data and
+# provides endpoints to write/read files — proving persistence.
+#
+# Key Points:
+#   - The PVC must exist and be Bound before this Deployment works
+#   - If the Pod is deleted, data on /app/data survives
+#   - The new Pod re-mounts the same PVC → same data!
+#
+# Try it:
+#   kubectl apply -f 05-pvc-dynamic.yaml          ← PVC first
+#   kubectl apply -f 06-deployment-storage.yaml    ← then Deployment
+#   kubectl get pods -l app=storage-demo -w
+# ──────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: storage-demo
+  labels:
+    app: storage-demo
+    lesson: L4-storage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: storage-demo
+  template:
+    metadata:
+      labels:
+        app: storage-demo
+    spec:
+      containers:
+        - name: demo-app
+          image: storage-demo-app:v1
+          ports:
+            - containerPort: 8000
+
+          # ── Environment Variables ──
+          env:
+            - name: APP_NAME
+              value: "k8s-storage-demo"
+            - name: DATA_DIR
+              value: "/app/data"
+            - name: STORAGE_TYPE
+              value: "PersistentVolumeClaim (dynamic)"
+
+          # ── Mount the PVC ──
+          volumeMounts:
+            - name: app-data                  # ← must match volume name
+              mountPath: /app/data            # ← path inside container
+              # subPath: mysubfolder          # ← optional: mount a subfolder
+
+          # ── Resource Limits (good practice) ──
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+
+      # ── Volume from PVC ──
+      volumes:
+        - name: app-data
+          persistentVolumeClaim:
+            claimName: dynamic-pvc             # ← must match PVC name
