@@ -1,0 +1,57 @@
+# ──────────────────────────────────────────────────────────
+# 05-pvc-dynamic.yaml
+# ──────────────────────────────────────────────────────────
+# PersistentVolumeClaim (PVC) — DYNAMIC provisioning.
+#
+# This PVC does NOT have a pre-created PV.
+# Instead, it uses a StorageClass, and Kubernetes will
+# AUTOMATICALLY create a PV for us!
+#
+# On Docker Desktop:  default StorageClass = "hostpath"
+# On Minikube:        default StorageClass = "standard"
+#
+# Check your default:
+#   kubectl get storageclass
+#
+# The magic:
+#   1. You create this PVC
+#   2. Kubernetes sees no matching PV
+#   3. Kubernetes asks the StorageClass provisioner to create one
+#   4. A new PV is auto-created and bound to this PVC
+#   5. Your Pod can now use it!
+#
+# Try it:
+#   kubectl apply -f 05-pvc-dynamic.yaml
+#   kubectl get pvc                  ← should show "Bound"
+#   kubectl get pv                   ← a NEW PV appears (auto-created!)
+# ──────────────────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dynamic-pvc
+  labels:
+    app: storage-demo
+    lesson: L4-storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+
+  resources:
+    requests:
+      storage: 256Mi
+
+  # ── StorageClass for dynamic provisioning ──
+  # "hostpath" works on Docker Desktop
+  # "standard" works on Minikube
+  # You can also OMIT this to use the default StorageClass
+  #
+  # To use the cluster default, comment out or remove storageClassName:
+  # storageClassName: ""        ← empty string = NO dynamic provisioning
+  # (no field at all)           ← uses default StorageClass
+
+  # Uncomment the right one for your setup:
+  # storageClassName: hostpath    # Docker Desktop
+  # storageClassName: standard    # Minikube
+
+  # Using the default (works on both Docker Desktop & Minikube):
+  # If you omit storageClassName entirely, K8s uses the default class
