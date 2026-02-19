@@ -1,0 +1,55 @@
+# ──────────────────────────────────────────────────────────
+# 02-hostpath.yaml
+# ──────────────────────────────────────────────────────────
+# hostPath Volume — Mounts a directory from the HOST NODE
+# into the Pod. Data persists on that specific node.
+#
+# ⚠️ WARNING: hostPath is NOT safe for production.
+#    - Data is tied to a single node
+#    - If pod moves to another node, data is gone
+#    - Use only for local dev/testing
+#
+# On Docker Desktop: the "node" is the Docker VM, so the
+# path /tmp/k8s-hostpath-demo is inside the Docker VM.
+#
+# Try it:
+#   kubectl apply -f 02-hostpath.yaml
+#   kubectl exec hostpath-demo -- cat /data/hello.txt
+#   kubectl exec hostpath-demo -- ls -la /data/
+#   kubectl delete pod hostpath-demo
+#   # Recreate → file is still on the node!
+#   kubectl apply -f 02-hostpath.yaml
+#   kubectl exec hostpath-demo -- cat /data/hello.txt  ← still there!
+# ──────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostpath-demo
+  labels:
+    app: hostpath-demo
+    lesson: L4-storage
+spec:
+  containers:
+    - name: app
+      image: busybox
+      command: ["sh", "-c"]
+      args:
+        - |
+          echo "=== hostPath demo started ==="
+          echo "Writing to /data/hello.txt..."
+          echo "Hello from hostPath! Written at $(date)" > /data/hello.txt
+          echo "Pod hostname: $(hostname)" >> /data/hello.txt
+          echo "Done. File contents:"
+          cat /data/hello.txt
+          echo "=== Sleeping forever (Ctrl+C to stop) ==="
+          sleep 3600
+      volumeMounts:
+        - name: host-storage
+          mountPath: /data                    # ← path inside container
+
+  volumes:
+    - name: host-storage
+      hostPath:
+        path: /tmp/k8s-hostpath-demo          # ← path on the HOST node
+        type: DirectoryOrCreate               # ← create if doesn't exist
+        # Other types: Directory, File, FileOrCreate
