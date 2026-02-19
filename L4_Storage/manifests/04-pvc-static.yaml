@@ -1,0 +1,49 @@
+# ──────────────────────────────────────────────────────────
+# 04-pvc-static.yaml
+# ──────────────────────────────────────────────────────────
+# PersistentVolumeClaim (PVC) — STATIC provisioning.
+#
+# This is the developer saying:
+#   "I need 500Mi of RWO storage from the 'manual' class."
+#
+# Kubernetes will look for a PV that matches:
+#   ✅ storageClassName = "manual"
+#   ✅ accessModes includes ReadWriteOnce
+#   ✅ capacity >= 500Mi
+#
+# It will find and bind to the PV we created in 03-pv-hostpath.yaml
+#
+# IMPORTANT: The PV (03) must be created BEFORE this PVC.
+#
+# Try it:
+#   kubectl apply -f 03-pv-hostpath.yaml   ← PV first
+#   kubectl apply -f 04-pvc-static.yaml    ← then PVC
+#   kubectl get pv,pvc                     ← both should show "Bound"
+# ──────────────────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: static-pvc
+  labels:
+    lesson: L4-storage
+spec:
+  # ── Access Mode (must match or be subset of PV's modes) ──
+  accessModes:
+    - ReadWriteOnce
+
+  # ── How much storage do I need? ──
+  # This must be <= PV's capacity
+  # Here: 500Mi requested, PV has 1Gi → OK ✅
+  resources:
+    requests:
+      storage: 500Mi
+
+  # ── Which StorageClass to use? ──
+  # Must match the PV's storageClassName
+  # "manual" → look for manually-created PVs only
+  storageClassName: manual
+
+  # ── Optional: Select specific PV by label ──
+  # selector:
+  #   matchLabels:
+  #     type: local
