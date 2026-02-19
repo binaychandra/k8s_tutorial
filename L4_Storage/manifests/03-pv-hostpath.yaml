@@ -1,0 +1,58 @@
+# ──────────────────────────────────────────────────────────
+# 03-pv-hostpath.yaml
+# ──────────────────────────────────────────────────────────
+# PersistentVolume (PV) — A cluster-level storage resource.
+#
+# This is like the admin saying:
+#   "Here's a 1Gi disk available for anyone to claim."
+#
+# This PV uses hostPath for local development.
+# In production, you'd use cloud storage (EBS, GCP PD, etc.)
+#
+# Key Fields:
+#   capacity.storage   → How much space this PV provides
+#   accessModes        → Who can read/write (RWO/ROX/RWX)
+#   persistentVolumeReclaimPolicy → What happens when PVC is deleted
+#   storageClassName   → Used to match PVCs to PVs
+#
+# Try it:
+#   kubectl apply -f 03-pv-hostpath.yaml
+#   kubectl get pv                   ← should show "Available"
+#   kubectl describe pv local-pv
+# ──────────────────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: local-pv
+  labels:
+    type: local
+    env: demo
+    lesson: L4-storage
+spec:
+  # ── How much storage this PV provides ──
+  capacity:
+    storage: 1Gi
+
+  # ── Access Modes ──
+  # ReadWriteOnce (RWO) = one node can mount read-write
+  # ReadOnlyMany  (ROX) = many nodes can mount read-only
+  # ReadWriteMany (RWX) = many nodes can mount read-write
+  accessModes:
+    - ReadWriteOnce
+
+  # ── Reclaim Policy ──
+  # Retain = keep PV and data after PVC is deleted (safe for prod)
+  # Delete = delete PV and data when PVC is deleted (good for dev)
+  persistentVolumeReclaimPolicy: Retain
+
+  # ── Storage Class Name ──
+  # PVCs looking for "manual" class will match this PV
+  # This is how Kubernetes knows which PVs a PVC can bind to
+  storageClassName: manual
+
+  # ── The actual storage backend ──
+  # For local dev: hostPath (data on the node's filesystem)
+  # For cloud: use awsElasticBlockStore, gcePersistentDisk, etc.
+  hostPath:
+    path: /tmp/k8s-pv-data
+    type: DirectoryOrCreate
